@@ -13,6 +13,12 @@ jobs:
   build-and-test:
     # 运行此任务的操作系统环境
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      issues: read
+      checks: write
+      pull-requests: write
 
     # 任务包含的步骤 (steps)
     steps:
