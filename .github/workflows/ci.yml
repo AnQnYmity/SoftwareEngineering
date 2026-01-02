@@ -82,7 +82,7 @@ jobs:
         ./test_transaction_repository
         ./test_statistics_service
         ./test_integration
-        lcov --capture --directory . --output-file coverage.info
+        lcov --capture --directory . --output-file coverage.info --ignore-errors mismatch
         lcov --remove coverage.info '/usr/*' '*/tests/*' --output-file coverage.info
         lcov --list coverage.info
 
