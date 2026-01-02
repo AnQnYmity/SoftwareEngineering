@@ -1,0 +1,89 @@
+# 工作流名称
+name: C++ Project CI
+
+# 触发工作流的事件：当有代码推送到 main 分支或有人向 main 分支发起 Pull Request 时触发
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+# 工作流包含的任务 (jobs)
+jobs:
+  build-and-test:
+    # 运行此任务的操作系统环境
+    runs-on: ubuntu-latest
+
+    # 任务包含的步骤 (steps)
+    steps:
+    # 第一步：检出你的代码库
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # 第二步：安装必要的依赖
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake g++ lcov
+
+    # 第三步：配置CMake构建
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Debug
+
+    # 第四步：编译项目
+    - name: Build project
+      run: |
+        cd build
+        cmake --build . -j$(nproc)
+
+    # 第五步：运行单元测试 - TransactionRepository
+    - name: Run TransactionRepository tests
+      run: |
+        cd build
+        ./test_transaction_repository --gtest_output=xml:test_transaction_repository_results.xml
+
+    # 第六步：运行单元测试 - StatisticsService
+    - name: Run StatisticsService tests
+      run: |
+        cd build
+        ./test_statistics_service --gtest_output=xml:test_statistics_service_results.xml
+
+    # 第七步：运行集成测试
+    - name: Run integration tests
+      run: |
+        cd build
+        ./test_integration --gtest_output=xml:test_integration_results.xml
+
+    # 第八步：收集测试结果
+    - name: Publish test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: |
+          build/test_*_results.xml
+
+    # 第九步：生成代码覆盖率报告（可选）
+    - name: Generate coverage report
+      if: success()
+      run: |
+        cd build
+        # 重新构建以启用覆盖率
+        cmake .. -DCMAKE_BUILD_TYPE=Coverage
+        cmake --build . --clean-first
+        ./test_transaction_repository
+        ./test_statistics_service
+        ./test_integration
+        lcov --capture --directory . --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' '*/tests/*' --output-file coverage.info
+        lcov --list coverage.info
+
+    # 第十步：上传覆盖率报告到Codecov（可选）
+    - name: Upload coverage to Codecov
+      if: success()
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./build/coverage.info
+        fail_ci_if_error: false
